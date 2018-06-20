@@ -31,11 +31,11 @@ $uString
 <?php
 
 $uString = new UnicodeString('Привет, мир');
-if ($uString->startsWith('Привет')) {
+if ($uString->startsWith('Привет') && $uString->endsWith('мир')) {
     // do your awesome things
 }
 if ($uString->empty()) {
-    // won't every happen
+    // won't ever happen
 }
 if ($uString->nonEmpty()) {
     // will definitely happen

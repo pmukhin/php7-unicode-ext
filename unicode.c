@@ -362,6 +362,10 @@ PHP_METHOD(UnicodeString, startsWith) {
 		return;
 	}
 	this = (unicode_string *) Z_OBJ_P(getThis());
+	if (substr_len > this->b_len) {
+		RETVAL_FALSE;
+		return;
+	}
 	for (int i = 0; i < (int)substr_len; ++i) {
 		if (this->str[i] != substr[i]) {
 			RETVAL_FALSE;
@@ -369,6 +373,31 @@ PHP_METHOD(UnicodeString, startsWith) {
 		}
 	}
 	RETVAL_TRUE;
+}
+
+PHP_METHOD(UnicodeString, endsWith) {
+	unicode_string *this;
+	char *substr;
+	size_t substr_len;
+	int cmp_r;
+
+	if (zend_parse_parameters_throw(ZEND_NUM_ARGS(), "s", &substr, &substr_len) == FAILURE) {
+		return;
+	}
+	this = (unicode_string *) Z_OBJ_P(getThis());
+	if (substr_len > this->b_len) {
+		RETVAL_FALSE;
+		return;
+	}
+
+	char *copy = this->str;
+	copy += this->b_len - substr_len;
+
+	if (cmp_r == strcmp(copy, substr)) {
+		RETVAL_TRUE;
+		return;
+	}
+	RETVAL_FALSE;
 }
 
 static const zend_function_entry php_unicode_ce_methods[] = {
@@ -382,6 +411,7 @@ static const zend_function_entry php_unicode_ce_methods[] = {
 	PHP_ME(UnicodeString, capitalize,	arginfo_unicode_none, 		ZEND_ACC_PUBLIC)
 	PHP_ME(UnicodeString, drop,			arginfo_unicode_drop, 		ZEND_ACC_PUBLIC)
 	PHP_ME(UnicodeString, startsWith,	arginfo_unicode_startsWith, ZEND_ACC_PUBLIC)
+	PHP_ME(UnicodeString, endsWith,		arginfo_unicode_startsWith, ZEND_ACC_PUBLIC)
 	PHP_FE_END
 };
 
