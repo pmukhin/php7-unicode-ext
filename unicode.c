@@ -376,27 +376,63 @@ PHP_METHOD(UnicodeString, startsWith) {
 
 PHP_METHOD(UnicodeString, endsWith) {
 	unicode_string *this;
-	char *substr;
+	char *substr, *copy;
 	size_t substr_len;
 	int cmp_r;
 
 	if (zend_parse_parameters_throw(ZEND_NUM_ARGS(), "s", &substr, &substr_len) == FAILURE) {
 		return;
 	}
+
 	this = (unicode_string *) Z_OBJ_P(getThis());
 	if (substr_len > this->b_len) {
 		RETVAL_FALSE;
 		return;
 	}
 
-	char *copy = this->str;
-	copy += this->b_len - substr_len;
-
+	copy = this->str + this->b_len - substr_len;
 	if (cmp_r == strcmp(copy, substr)) {
 		RETVAL_TRUE;
 		return;
 	}
+
 	RETVAL_FALSE;
+}
+
+PHP_METHOD(UnicodeString, foreach) {
+	unicode_string *this;
+	zend_fcall_info fci = empty_fcall_info;
+	zend_fcall_info_cache fci_cache = empty_fcall_info_cache;
+	int call_res;
+
+	RETVAL_NULL();
+	ZEND_PARSE_PARAMETERS_START(0, -1)
+		Z_PARAM_FUNC_EX(fci, fci_cache, 1, 0)
+	ZEND_PARSE_PARAMETERS_END();
+
+	if (!ZEND_FCI_INITIALIZED(fci)) {
+		zend_throw_exception(zend_exceptions_get_default(), "broken callable", 21);
+		return;
+	}
+
+	this = (unicode_string *) Z_OBJ_P(getThis());
+	if (this->u_len == 0) return;
+
+	zval args[1];
+	zval response;
+	
+	for (int i = 0; i < (int)this->u_len; ++i) {
+		int32_t r_val = this->ubuffer[i];
+		unicode_rune *rune = php_rune_internal_ctor(r_val);
+
+		ZVAL_OBJ(&args[0], rune);
+		fci.retval = &response;
+		fci.param_count = 1;
+		fci.params = args;
+		fci.no_separation = 0;
+
+		call_res = zend_call_function(&fci, &fci_cache);
+	}
 }
 
 static const zend_function_entry php_unicode_ce_methods[] = {
@@ -411,6 +447,8 @@ static const zend_function_entry php_unicode_ce_methods[] = {
 	PHP_ME(UnicodeString, drop,			arginfo_unicode_drop, 		ZEND_ACC_PUBLIC)
 	PHP_ME(UnicodeString, startsWith,	arginfo_unicode_startsWith, ZEND_ACC_PUBLIC)
 	PHP_ME(UnicodeString, endsWith,		arginfo_unicode_startsWith, ZEND_ACC_PUBLIC)
+
+	PHP_ME(UnicodeString, foreach,		arginfo_unicode_startsWith, ZEND_ACC_PUBLIC)
 	PHP_FE_END
 };
 

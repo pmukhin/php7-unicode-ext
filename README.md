@@ -43,8 +43,22 @@ if ($uString->nonEmpty()) {
 ```
 ### Decompostion
 ```php
+<?php
+
 $uString = new UnicodeString('Привет, мир');
 $ints = $uString->map(function(Rune $rune) {
     return $rune->toInt();
 });
+print_r($ints); [
+            1055, // П
+            1088, // р
+            1080, // и
+            1074, // в
+            1077, // е
+            1090, // т
+            32,   // SPACE
+            1084, // м
+            1080, // и
+            1088, // р
+        ];
 ```

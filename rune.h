@@ -8,6 +8,8 @@ typedef struct unicode_rune {
     int32_t rune;    // content
 } unicode_rune;
 
+unicode_rune *php_rune_internal_ctor(int32_t value);
+
 void php_register_rune_class();
 
 #endif

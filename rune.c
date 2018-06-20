@@ -14,7 +14,7 @@ static unicode_rune *php_rune_create(zend_class_entry *ce) {
 	return rune;
 }
 
-static unicode_rune *php_rune_internal_ctor(int32_t value) {
+unicode_rune *php_rune_internal_ctor(int32_t value) {
     unicode_rune *rune = php_rune_create(php_unicode_rune_ce);
     rune->rune = value;
 
@@ -24,6 +24,21 @@ static unicode_rune *php_rune_internal_ctor(int32_t value) {
 static zend_object *php_rune_new(zend_class_entry *ce) {
     unicode_rune *rune = php_rune_create(ce);
     return &rune->std;
+}
+
+static int get_ch_width(int32_t uc) {
+    if (uc < 0x00) {
+        return 0;
+    } else if (uc < 0x80) {
+        return 1;
+    } else if (uc < 0x800) {
+        return 2;
+    } else if (uc < 0x10000) {
+        return 3;
+    } else if (uc < 0x110000) {
+        return 4;
+    }
+    return -1;
 }
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_unicode_fromInt, 0, 0, 1)
@@ -48,34 +63,58 @@ PHP_METHOD(Rune, __toString) {
         return;
     }
     zend_string *zstr;
-    size_t mal_b = 0;
-    
     this = (unicode_rune *) Z_OBJ_P(getThis());
     utf8proc_int32_t uc = (utf8proc_int32_t) this->rune;
+    int mal_b = get_ch_width(uc);
+    char buf[mal_b + 1];
 
-    if (uc < 0x00) {
-        zend_throw_exception(zend_exceptions_get_default(), "empty char", 0);
-        return;
-    } else if (uc < 0x80) {
-        mal_b = 1;
-    } else if (uc < 0x800) {
-        mal_b = 2;
-    } else if (uc < 0x10000) {
-        mal_b = 3;
-    } else if (uc < 0x110000) {
-        mal_b = 4;
-    }
-
-    char buf[5];
     utf8proc_encode_char(uc, buf);
     buf[mal_b] = '\0';
 
     RETVAL_STRINGL(buf, mal_b);
 }
 
+PHP_METHOD(Rune, toInt) {
+    unicode_rune *this;
+    if (zend_parse_parameters_none_throw() == FAILURE) {
+        return;
+    }
+    this = (unicode_rune *) Z_OBJ_P(getThis());
+    RETVAL_LONG(this->rune);
+}
+
+PHP_METHOD(Rune, isAscii) {
+    unicode_rune *this;
+    if (zend_parse_parameters_none_throw() == FAILURE) {
+        return;
+    }
+    this = (unicode_rune *) Z_OBJ_P(getThis());
+    if ((unsigned)this->rune < 128) {
+        RETVAL_TRUE;
+        return;
+    }
+    RETVAL_FALSE;
+}
+
+PHP_METHOD(Rune, isCyrillic) {
+    unicode_rune *this;
+    if (zend_parse_parameters_none_throw() == FAILURE) {
+        return;
+    }
+    this = (unicode_rune *) Z_OBJ_P(getThis());
+    if ((unsigned)this->rune >= 1024 && (unsigned)this->rune <= 1327) {
+        RETVAL_TRUE;
+        return;
+    }
+    RETVAL_FALSE;
+}
+
 static const zend_function_entry php_rune_ce_methods[] = {
     PHP_ME(Rune, fromInt32,    arginfo_unicode_fromInt,    ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
     PHP_ME(Rune, __toString,   arginfo_unicode_none,       ZEND_ACC_PUBLIC)
+    PHP_ME(Rune, toInt,        arginfo_unicode_none,       ZEND_ACC_PUBLIC)
+    PHP_ME(Rune, isAscii,      arginfo_unicode_none,       ZEND_ACC_PUBLIC)
+    PHP_ME(Rune, isCyrillic,   arginfo_unicode_none,       ZEND_ACC_PUBLIC)
     PHP_FE_END
 };
 
