@@ -1,7 +1,7 @@
 /* unicode extension for PHP */
 
 #ifndef PHP_UNICODE_H
-# define PHP_UNICODE_H
+#define PHP_UNICODE_H
 
 #include <unistd.h>
 

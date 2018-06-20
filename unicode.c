@@ -12,6 +12,7 @@
 #include "zend_interfaces.h"
 #include "zend_exceptions.h"
 #include "utf8proc.h"
+#include "rune.h"
 
 #define DEBUG_USTRING(obj) 	printf("=============================\n"); \
 							printf("b_len: %d\n", (int)obj->b_len); \
@@ -173,8 +174,6 @@ PHP_MINFO_FUNCTION(unicode)
 ZEND_BEGIN_ARG_INFO_EX(arginfo_unicode_new, 0, 0, 1)
 	ZEND_ARG_INFO(0, str)
 ZEND_END_ARG_INFO()
-
-
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_unicode_substring, 0, 0, 2)
 	ZEND_ARG_INFO(0, start)
@@ -426,6 +425,8 @@ PHP_MINIT_FUNCTION(unicode) {
 	php_unicode_ce = zend_register_internal_class(&ce);
 	php_unicode_ce->ce_flags |= ZEND_ACC_FINAL;
 	php_unicode_ce->create_object = php_unicode_new;
+
+	php_register_rune_class();
 
 	return SUCCESS;
 }
