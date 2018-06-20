@@ -1,0 +1,7 @@
+ARG_ENABLE('unicode', 'unicode support', 'no');
+
+if (PHP_UNICODE != 'no') {
+	AC_DEFINE('HAVE_UNICODE', 1, 'unicode support enabled');
+
+	EXTENSION('unicode', 'unicode.c', null, '/DZEND_ENABLE_STATIC_TSRMLS_CACHE=1');
+}
