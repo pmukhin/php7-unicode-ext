@@ -41,3 +41,10 @@ if ($uString->nonEmpty()) {
     // will definitely happen
 }
 ```
+### Decompostion
+```php
+$uString = new UnicodeString('Привет, мир');
+$ints = $uString->map(function(Rune $rune) {
+    return $rune->toInt();
+});
+```
