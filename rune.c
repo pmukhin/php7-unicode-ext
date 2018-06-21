@@ -215,12 +215,16 @@ static const zend_function_entry php_rune_ce_methods[] = {
     PHP_ME(Rune, fromInt32,    arginfo_unicode_fromInt,    ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
     PHP_ME(Rune, fromChar,     arginfo_unicode_fromInt,    ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
 
+    // conversions
     PHP_ME(Rune, __toString,   arginfo_unicode_none,       ZEND_ACC_PUBLIC)
     PHP_ME(Rune, toInt,        arginfo_unicode_none,       ZEND_ACC_PUBLIC)
+
+    // tests
     PHP_ME(Rune, isDigit,      arginfo_unicode_none,       ZEND_ACC_PUBLIC)
     PHP_ME(Rune, isAscii,      arginfo_unicode_none,       ZEND_ACC_PUBLIC)
     PHP_ME(Rune, isCyrillic,   arginfo_unicode_none,       ZEND_ACC_PUBLIC)
 
+    // case modifiers
     PHP_ME(Rune, toUpper,      arginfo_unicode_none,       ZEND_ACC_PUBLIC)
     PHP_ME(Rune, toLower,      arginfo_unicode_none,       ZEND_ACC_PUBLIC)
     PHP_FE_END
@@ -230,11 +234,11 @@ void php_register_rune_class() {
     zend_class_entry ce;
 
     memcpy(&php_unicode_rune_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
-	php_unicode_rune_handlers.free_obj = NULL;
-	php_unicode_rune_handlers.clone_obj = NULL;
+    php_unicode_rune_handlers.free_obj = NULL;
+    php_unicode_rune_handlers.clone_obj = NULL;
 
-	INIT_CLASS_ENTRY(ce, "Rune", php_rune_ce_methods);
-	php_unicode_rune_ce = zend_register_internal_class(&ce);
-	php_unicode_rune_ce->ce_flags |= ZEND_ACC_FINAL;
+    INIT_CLASS_ENTRY(ce, "Rune", php_rune_ce_methods);
+    php_unicode_rune_ce = zend_register_internal_class(&ce);
+    php_unicode_rune_ce->ce_flags |= ZEND_ACC_FINAL;
     php_unicode_rune_ce->create_object = php_rune_new;
 }
