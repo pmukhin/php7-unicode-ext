@@ -1,5 +1,6 @@
 #include "rune.h"
 #include "utf8proc.h"
+#include "zend_exceptions.h"
 
 static zend_class_entry *php_unicode_rune_ce;
 static zend_object_handlers php_unicode_rune_handlers;
@@ -56,6 +57,42 @@ PHP_METHOD(Rune, fromInt32) {
         return;
     }
     unicode_rune *r = php_rune_internal_ctor((int32_t)i);
+    RETVAL_OBJ((zend_object *) r);
+}
+/* }}} */
+
+/* {{{ proto Rune Rune::fromChar() 
+        returns Rune corresponding to a char (which is in terms of PHP 1-ch string)  */
+PHP_METHOD(Rune, fromChar) {
+    const char *ch;
+    const size_t len;
+    size_t u_len;
+
+    if (zend_parse_parameters_throw(ZEND_NUM_ARGS(), "s", &ch, &len) == FAILURE) {
+        return;
+    }
+    if (len > 4) { // not valid utf-8 for sure
+        zend_throw_exception_ex(zend_ce_exception, 12,
+            "expected a character, string of length %u given", len);
+        return;
+    }
+    int32_t uc[4]; // buffer for a int32_t sequence
+    u_len = utf8proc_decompose(ch, -1, uc, 4,  UTF8PROC_NULLTERM);
+
+    // @todo think on error reporting
+    if (u_len < 0) { // error occured
+        zend_throw_exception_ex(zend_ce_exception, 12,
+            "unknown error");
+        return;
+    }
+    
+    if (u_len > 1) {
+        zend_throw_exception_ex(zend_ce_exception, 12,
+            "expected a character, string of length %u given", u_len);
+        return;
+    }
+
+    unicode_rune *r = php_rune_internal_ctor((int32_t)uc[0]);
     RETVAL_OBJ((zend_object *) r);
 }
 /* }}} */
@@ -174,7 +211,10 @@ PHP_METHOD(Rune, toLower) {
 /* }}} */
 
 static const zend_function_entry php_rune_ce_methods[] = {
+    // constructors
     PHP_ME(Rune, fromInt32,    arginfo_unicode_fromInt,    ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+    PHP_ME(Rune, fromChar,     arginfo_unicode_fromInt,    ZEND_ACC_PUBLIC|ZEND_ACC_STATIC)
+
     PHP_ME(Rune, __toString,   arginfo_unicode_none,       ZEND_ACC_PUBLIC)
     PHP_ME(Rune, toInt,        arginfo_unicode_none,       ZEND_ACC_PUBLIC)
     PHP_ME(Rune, isDigit,      arginfo_unicode_none,       ZEND_ACC_PUBLIC)
