@@ -57,9 +57,8 @@ if ($uString->nonEmpty()) {
 <?php
 
 $uString = new UnicodeString('Привет, мир');
-$ints = $uString->map(function(Rune $rune) {
-    return $rune->toInt();
-});
+$ints = $uString->toIntArray();
+
 print_r($ints); [
             1055, // П
             1088, // р
@@ -72,4 +71,10 @@ print_r($ints); [
             1080, // и
             1088, // р
         ];
+
+$newString = $uString->map(function(Rune $rune) {
+    return $rune->toUpper();
+});
+
+print($newString); // 'ПРИВЕТ МИР'
 ```
