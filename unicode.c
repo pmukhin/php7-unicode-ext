@@ -169,8 +169,6 @@ PHP_MINFO_FUNCTION(unicode)
 
 /* {{{ arginfo
  */
-
-
 ZEND_BEGIN_ARG_INFO_EX(arginfo_unicode_new, 0, 0, 1)
 	ZEND_ARG_INFO(0, str)
 ZEND_END_ARG_INFO()
@@ -309,7 +307,7 @@ PHP_METHOD(UnicodeString, __toString) {
 	if (zend_parse_parameters_none_throw() == FAILURE) {
 		return;
 	}
-	unicode_string *this = (unicode_string *)Z_OBJ_P(getThis());
+	unicode_string *this = (unicode_string *) Z_OBJ_P(getThis());
 	zend_string *str = zend_string_init(this->str, this->b_len, 0);
 
 	RETVAL_STR(str);
@@ -319,7 +317,7 @@ PHP_METHOD(UnicodeString, empty) {
 	if (zend_parse_parameters_none_throw() == FAILURE) {
 		return;
 	}
-	unicode_string *this = (unicode_string *)Z_OBJ_P(getThis());
+	unicode_string *this = (unicode_string *) Z_OBJ_P(getThis());
 	if (0 == this->b_len) {
 		RETVAL_TRUE;
 		return;
@@ -348,9 +346,8 @@ PHP_METHOD(UnicodeString, drop) {
 	unicode_string *this = (unicode_string *)Z_OBJ_P(getThis());
 	unicode_string *ret = php_unicode_create(php_unicode_ce);
 
-	drop_nchars(ret, this, (size_t)n);
-
-	RETVAL_OBJ((zend_object*)ret);
+	drop_nchars(ret, this, (size_t) n);
+	RETVAL_OBJ((zend_object *) ret);
 }
 
 PHP_METHOD(UnicodeString, startsWith) {
@@ -360,17 +357,20 @@ PHP_METHOD(UnicodeString, startsWith) {
 	if (zend_parse_parameters_throw(ZEND_NUM_ARGS(), "s", &substr, &substr_len) == FAILURE) {
 		return;
 	}
+
 	this = (unicode_string *) Z_OBJ_P(getThis());
 	if (substr_len > this->b_len) {
 		RETVAL_FALSE;
 		return;
 	}
+
 	for (int i = 0; i < (int)substr_len; ++i) {
 		if (this->str[i] != substr[i]) {
 			RETVAL_FALSE;
 			return;
 		}
 	}
+
 	RETVAL_TRUE;
 }
 
@@ -406,7 +406,7 @@ PHP_METHOD(UnicodeString, foreach) {
 	int call_res;
 
 	RETVAL_NULL();
-	ZEND_PARSE_PARAMETERS_START(0, -1)
+	ZEND_PARSE_PARAMETERS_START(1, 1)
 		Z_PARAM_FUNC_EX(fci, fci_cache, 1, 0)
 	ZEND_PARSE_PARAMETERS_END();
 
@@ -431,8 +431,90 @@ PHP_METHOD(UnicodeString, foreach) {
 		fci.params = args;
 		fci.no_separation = 0;
 
-		call_res = zend_call_function(&fci, &fci_cache);
+		if ((call_res = zend_call_function(&fci, &fci_cache)) == FAILURE) {
+			zend_throw_exception(zend_exception_get_default(), "an error occured", 12);
+			return;
+		}
 	}
+}
+
+PHP_METHOD(UnicodeString, map) {
+	unicode_string *this;
+	zend_fcall_info fci = empty_fcall_info;
+	zend_fcall_info_cache fci_cache = empty_fcall_info_cache;
+	int call_res;
+
+	RETVAL_NULL();
+	ZEND_PARSE_PARAMETERS_START(0, -1)
+		Z_PARAM_FUNC_EX(fci, fci_cache, 1, 0)
+	ZEND_PARSE_PARAMETERS_END();
+
+	if (!ZEND_FCI_INITIALIZED(fci)) {
+		zend_throw_exception(zend_exceptions_get_default(), "broken callable", 21);
+		return;
+	}
+
+	this = (unicode_string *) Z_OBJ_P(getThis());
+	if (this->u_len == 0) return;
+
+	zval args[1];
+	zval response;
+	 
+	unicode_string *u_str = php_unicode_create(php_unicode_ce);
+	int32_t *u_buf = (int32_t *) emalloc(sizeof(int32_t) * this->u_len + 1);
+	u_buf[this->u_len] = '\0';
+
+	size_t b_len = 1; // for \0
+
+	for (int i = 0; i < (int)this->u_len; ++i) {
+		int32_t r_val = this->ubuffer[i];
+		unicode_rune *rune = php_rune_internal_ctor(r_val);
+
+		ZVAL_OBJ(&args[0], rune);
+		fci.retval = &response;
+		fci.param_count = 1;
+		fci.params = args;
+		fci.no_separation = 0;
+
+		if ((call_res = zend_call_function(&fci, &fci_cache)) == FAILURE) {
+			zend_throw_exception(zend_exception_get_default(), "an error occured", 12);
+			return;
+		}
+
+		if (Z_TYPE(response) != IS_OBJECT) {
+			zend_throw_exception(
+				zend_ce_type_error, 
+				"map function should return an object of type Rune", 12);
+			return;
+		}
+
+		const char *cename = ZSTR_VAL(Z_OBJCE(response)->name); 
+		if (strcmp("Rune", cename) != 0) {
+			zend_throw_exception_ex(
+				zend_ce_type_error, 
+				"map function should return an object of type Rune, %s given", 
+				12, cename);
+			return;
+		}
+
+		u_buf[i] = ((unicode_rune *) Z_OBJ(response))->rune;
+		b_len += (size_t)get_ch_width(u_buf[i]);
+	}
+	
+	u_str->ubuffer = u_buf;
+	u_str->u_len = this->u_len;
+	
+	int32_t *data = (int32_t *) emalloc(sizeof(char) * b_len + 1);
+	memcpy((void *) data,(void *) u_buf, b_len * sizeof(int32_t));
+
+	size_t len = utf8proc_reencode(data, u_str->u_len, UTF8PROC_NULLTERM);
+	data = (char *)erealloc(data, len + 1);
+	data[len] = '\0';
+
+	u_str->str = data;
+	u_str->b_len = len;
+
+	RETURN_OBJ((zend_object *)u_str);
 }
 
 static const zend_function_entry php_unicode_ce_methods[] = {
@@ -447,8 +529,9 @@ static const zend_function_entry php_unicode_ce_methods[] = {
 	PHP_ME(UnicodeString, drop,			arginfo_unicode_drop, 		ZEND_ACC_PUBLIC)
 	PHP_ME(UnicodeString, startsWith,	arginfo_unicode_startsWith, ZEND_ACC_PUBLIC)
 	PHP_ME(UnicodeString, endsWith,		arginfo_unicode_startsWith, ZEND_ACC_PUBLIC)
-
+	// iterations
 	PHP_ME(UnicodeString, foreach,		arginfo_unicode_startsWith, ZEND_ACC_PUBLIC)
+	PHP_ME(UnicodeString, map,			arginfo_unicode_startsWith, ZEND_ACC_PUBLIC)
 	PHP_FE_END
 };
 

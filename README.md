@@ -12,8 +12,19 @@ struct unicode_string {
     size_t u_len;       // characters length
 };
 ```
+## Examples. Rune
+```php
+<?php
 
-## Examples
+$rune = (new UnicodeString('Привет, мир'))[0];
+$rune->isAscii(); // false
+$rune->isCyrillic(); // true
+$rune->toInt(); // 1055
+$rune->toUpper(); // Rune('П')
+$rune->toLower(); // Rune('п')
+```
+
+## Examples. UnicodeString
 ### Modification
 ```php
 <?php
